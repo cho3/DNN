@@ -18,12 +18,18 @@ type NeuralNetwork
   biases::NNWeights
   neuron::Function
   gradient::Function
+  output_neuron::Function
+  output_gradient::Function
   c::Float64 #regularization term
   reg::String #type of regularization
 
   #lam1::Float64 #L1 regularization term
   #lam2::Float64 #L2 regularization term
   #alternatively, have a arbitrary "c" parameter that gets related to one of the regularization types: L1, L2, maxnorm, dropout
+  yu::Array{Float64,1}
+  yl::Array{Float64,1}
+  xu::Array{Float64,1}
+  xs::Array{Float64,1}
   verbose::Bool
 end
 
@@ -82,6 +88,14 @@ function +(x::NNWeights, y::NNWeights)
   return z
 end
 
+function +(x::NNWeights,y::Float64)
+  return x + one(x)*y
+end
+
+function +(y::Float64,x::NNWeights)
+  return x + y
+end
+
 function mult!(x::NNWeights,a::Real)
   L = length(x.x)
   for i = 1:L
@@ -128,7 +142,43 @@ function randweights(sizes)
   #only for initialization of parameters
   L = length(sizes)
   d = length(sizes[1])
-  x = Dict{Int,Array{Float64,d}}([i=>rand(sizes[i]...)./sqrt(2.0/sizes[i][2]) for i = 1:L])
+  x = Dict{Int,Array{Float64,d}}([i=>(rand(sizes[i]...)-0.5)./sqrt(2.0/sizes[i][2]) for i = 1:L])
   return NNWeights{d}(x)
+end
+
+function norm(x::NNWeights)
+  L = length(x.x)
+  val = 0
+  for i = 1:L
+    val += sum([j*j for j in x.x[i][:]])#vecnorm(x.x[i])
+  end
+  return val
+end
+
+function ^(x::NNWeights,i::Int)
+  y = zero(x)
+  L = length(x.x)
+  for i = 1:L
+    y.x[i] = x.x[i].*x.x[i]
+  end
+  return y
+end
+
+function /(x::NNWeights,y::NNWeights)
+  z = zero(x)
+  L = length(x.x)
+  for i = 1:L
+    z.x[i] = x.x[i]./y.x[i]
+  end
+  return z
+end
+
+function sqrt(x::NNWeights)
+  y = zero(x)
+  L = length(x.x)
+  for i = 1:L
+    y.x[i] = sqrt(x.x[i])
+  end
+  return y
 end
 #######################################################################
